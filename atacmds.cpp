@@ -2199,6 +2199,9 @@ static const char * get_default_attr_name(unsigned char id, int rpm)
     return "Power_Cycle_Count";
   case 13:
     return "Read_Soft_Error_Rate";
+  case 144:
+	// Shannon System
+	return "Free_Block_Count";
   case 175:
     if (hdd) return Unknown_HDD_Attribute;
     return "Program_Fail_Count_Chip";
