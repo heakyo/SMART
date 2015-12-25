@@ -615,30 +615,37 @@ struct ata_sct_temperature_history_table
 ASSERT_SIZEOF_STRUCT(ata_sct_temperature_history_table, 512);
 
 //////////////////////////////////////////////Shannon System Definition//////////////////////////////////////////////
+#define SS_COMMAND_MAGIC 0x5343
+
 typedef enum {
-  ERASE_COUNT = 1
+  ERASE_COUNT = ((SS_COMMAND_MAGIC<<16) + 1)
 } shannon_command_set;
 
 
 // Shannon System: Erase Count per Superblock
-#define SUPER_BLOCK_COUNT 256
+#define SUPER_BLOCK_COUNT 512
+#define LOG_PAGE_SIZE 512
 #pragma pack(1)
 struct ata_erase_count
 {
-  int erase_count[SUPER_BLOCK_COUNT];
+  unsigned char erase_count[SUPER_BLOCK_COUNT];
 } ATTR_PACKED;
 #pragma pack()
-ASSERT_SIZEOF_STRUCT(ata_erase_count, SUPER_BLOCK_COUNT * sizeof(int));
+ASSERT_SIZEOF_STRUCT(ata_erase_count, SUPER_BLOCK_COUNT * sizeof(char));
 
 // Shannon System: shannon system command
 #pragma pack(1)
 struct ata_shannon_command
 {
-  unsigned short ss_command;        // the command for shannon system
-  unsigned short words001_255[255]; // reserved
+  unsigned int ss_command;        // the command for shannon system
+  unsigned int offset;
+  unsigned int size;
+  unsigned char reserved[500];
 } ATTR_PACKED;
 #pragma pack()
 ASSERT_SIZEOF_STRUCT(ata_shannon_command, 512);
+//////////////////////////////////////////////End Definition//////////////////////////////////////////////
+
 
 // Possible values for span_args.mode
 enum {
@@ -1042,5 +1049,9 @@ inline void swapx(uint64_t * p)
 // Return pseudo-device to parse "smartctl -r ataioctl,2 ..." output
 // and simulate an ATA device with same behaviour
 ata_device * get_parsed_ata_device(smart_interface * intf, const char * dev_name);
+
+// new parameters for prettyprint
+void prettyprint_ext(const unsigned char *p, const char *name, const int size);
+
 
 #endif /* ATACMDS_H_ */

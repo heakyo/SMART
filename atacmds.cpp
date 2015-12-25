@@ -411,6 +411,50 @@ static void prettyprint(const unsigned char *p, const char *name){
   pout("===== [%s] DATA END (512 Bytes) =====\n\n", name);
 }
 
+void prettyprint_ext(const unsigned char *p, const char *name, const int size)
+{
+	int column = 32;
+	int i = 0;
+
+	pout("\n===== [%s] DATA START (BASE-16) =====\n", name);
+
+	// print head number
+	pout("	   ");
+	for (i = 0; i < column; i++) {
+		pout("%02X ", i);
+	}
+	pout("\n");
+
+	// print data
+	for (i = 0; i < size; i += column, p += column) {
+#define P(n) (' ' <= p[n] && p[n] <= '~' ? (int)p[n] : '.')
+		// print complete line to avoid slow tty output and extra lines in syslog.
+		pout("%04X-%04X: %02x %02x %02x %02x %02x %02x %02x %02x "
+						"%02x %02x %02x %02x %02x %02x %02x %02x "
+						"%02x %02x %02x %02x %02x %02x %02x %02x "
+						"%02x %02x %02x %02x %02x %02x %02x %02x "
+						" |%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c"
+						"%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c|"
+			 "%c",
+			 i, i+column-1,
+			 p[ 0], p[ 1], p[ 2], p[ 3], p[ 4], p[ 5], p[ 6], p[ 7],
+			 p[ 8], p[ 9], p[10], p[11], p[12], p[13], p[14], p[15],
+			 p[ 16], p[ 17], p[ 18], p[ 19], p[ 20], p[ 21], p[ 22], p[ 23],
+			 p[ 24], p[ 25], p[26], p[27], p[28], p[29], p[30], p[31], 
+			 P( 0), P( 1), P( 2), P( 3), P( 4), P( 5), P( 6), P( 7),
+			 P( 8), P( 9), P(10), P(11), P(12), P(13), P(14), P(15),
+			 P( 16), P( 17), P( 18), P( 19), P( 20), P( 21), P( 22), P( 23),
+			 P( 24), P( 25), P(26), P(27), P(28), P(29), P(30), P(31),
+			 '\n');
+	}
+#undef P
+	pout("===== [%s] DATA END (%d Bytes) =====\n\n", name, size);
+
+	return;
+
+}
+
+
 // This function provides the pretty-print reporting for SMART
 // commands: it implements the various -r "reporting" options for ATA
 // ioctls.
@@ -2884,8 +2928,10 @@ int ataPrintSmartSelfTestlog(const ata_smart_selftestlog * data, bool allentries
 
 int ataGetEraseCount (ata_device * device,  ata_erase_count * perase_count){
 
-#if 0
+#if 1
   ata_shannon_command cmd;
+  int i = 0;
+  int loops = SUPER_BLOCK_COUNT / LOG_PAGE_SIZE;
 
   if (NULL == perase_count) {
   	pout("perase_count is NULL!!");
@@ -2893,22 +2939,38 @@ int ataGetEraseCount (ata_device * device,  ata_erase_count * perase_count){
   }
 
   memset(&cmd, 0x0, sizeof(cmd));
+  memset(perase_count, 0x0, sizeof(*perase_count));
+  
+#if 0
+  int i = 0;
+
+  for (i = 0; i < SUPER_BLOCK_COUNT; i++) {
+	perase_count->erase_count[i] = i;
+  }
+#endif
 
   cmd.ss_command = ERASE_COUNT;
+  cmd.size = LOG_PAGE_SIZE;
 
-  // write command via Host Vendor Specific log
-  if (smartcommandhandler(device, WRITE_LOG, 0x80, (char *)&cmd)){
-    pout("Write Host Vendor Specific log 0x80 failed: %s\n", device->get_errmsg());
-    return -1;
-  }
+  for (i = 0; i < loops; i++) {
+  	
+    cmd.offset = (i * cmd.size);
 
-  // read erase count data via Host Vendor Specific log
-  memset(perase_count, 0x0, sizeof(*perase_count));
-  if (smartcommandhandler(device, READ_LOG, 0x80, (char *)perase_count)){
-    pout("Read Host Vendor Specific log 0x85 failed: %s\n", device->get_errmsg());
-    return -1;
-  }
+  	// write command via Host Vendor Specific log
+    if (smartcommandhandler(device, WRITE_LOG, 0x80, (char *)&cmd)){
+    //if (smartcommandhandler(device, WRITE_LOG, 0x80, (char *)perase_count)){
+      pout("Write Host Vendor Specific log 0x80 failed: %s\n", device->get_errmsg());
+      return -1;
+    }
   
+    // read erase count data via Host Vendor Specific log
+    if (smartcommandhandler(device, READ_LOG, 0x85, ((char *)perase_count+cmd.offset))){
+      pout("Read Host Vendor Specific log 0x85 failed: %s\n", device->get_errmsg());
+      return -1;
+    }
+
+  }
+
 #else
 
   int i = 0;
