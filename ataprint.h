@@ -71,6 +71,7 @@ struct ata_print_options
   bool sataphy, sataphy_reset;
 
   bool smart_disable, smart_enable;
+  bool ss_erase_count;
   bool smart_auto_offl_disable, smart_auto_offl_enable;
   bool smart_auto_save_disable, smart_auto_save_enable;
 

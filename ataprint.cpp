@@ -2522,6 +2522,48 @@ static void print_standby_timer(const char * msg, int timer, const ata_identify_
     pout("%s%d (%02d:%02d:%02d%s%s)\n", msg, timer, hours, minutes, seconds, s2, s3);
 }
 
+// Print Erase Count
+static int ataPrintEraseCount(const ata_erase_count * aec)
+{
+	int i = 0, j = 0, k = 0;
+	int subrow = 9, column = 8;
+	int stripe = (subrow - 1) * column;
+	int row = ((SUPER_BLOCK_COUNT) + (stripe-1)) / stripe;
+	int index = 0;
+
+	if (NULL == aec) {
+		pout("aec is NULL\n");
+		return -1;
+	}
+
+	for (k = 0; k < row; k++) {
+		
+	  for (i = 0; i < subrow; i++) {
+		
+		  for (j = 0; j < column; j++) {
+	  
+			if (i % 9 == 0) {
+				pout(" Index	Erase Count	|");
+			} else {
+				index = k*stripe+(i-1)+j*(subrow-1);
+				if (index > (SUPER_BLOCK_COUNT)) {
+					pout(" 	 		|");
+					continue;
+				}
+				pout(" %4X	%4X 		|", index, aec->erase_count[index]);
+			}
+			  
+		  }
+	  
+		  pout("\n");
+	  }
+
+	  pout("----------------------------------------------------------------------------------------------------------------\
+---------------------------------------------------------------------------------\n");
+	}
+
+	return 0;
+}
 
 int ataPrintMain (ata_device * device, const ata_print_options & options)
 {
@@ -2622,13 +2664,18 @@ int ataPrintMain (ata_device * device, const ata_print_options & options)
        || options.sct_wcache_reorder_set
   );
 
+  bool need_ss_support = (
+  	      options.ss_erase_count
+  );
+
   // Exit if no further options specified
   if (!(   options.drive_info || options.show_presets
         || need_smart_support || need_smart_logdir
         || need_gp_logdir     || need_sct_support
         || options.sataphy
         || options.identify_word_level >= 0
-        || options.get_set_used                      )) {
+        || options.get_set_used 
+        || need_ss_support )) {
     if (powername)
       pout("Device is in %s mode\n", powername);
     else
@@ -2933,6 +2980,18 @@ int ataPrintMain (ata_device * device, const ata_print_options & options)
       pout("SMART Disable failed: %s\n\n", device->get_errmsg());
       failuretest(MANDATORY_CMD,returnval|=FAILSMART);
     }
+  }
+
+  pout("options.ss_erase_count:%d\n", options.ss_erase_count);
+  // Get Erase Count per Super Block
+  if (options.ss_erase_count) {
+  	ata_erase_count erase_count;
+	if (ataGetEraseCount(device, &erase_count)) {
+	  pout("Get Erase Count failed: %s\n\n", device->get_errmsg());
+      failuretest(OPTIONAL_CMD,returnval|=FAILSMART);
+	}
+	ataPrintEraseCount(&erase_count);
+	pout("\n");
   }
 
   // Exit if SMART is disabled but must be enabled to proceed

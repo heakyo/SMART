@@ -614,6 +614,32 @@ struct ata_sct_temperature_history_table
 #pragma pack()
 ASSERT_SIZEOF_STRUCT(ata_sct_temperature_history_table, 512);
 
+//////////////////////////////////////////////Shannon System Definition//////////////////////////////////////////////
+typedef enum {
+  ERASE_COUNT = 1
+} shannon_command_set;
+
+
+// Shannon System: Erase Count per Superblock
+#define SUPER_BLOCK_COUNT 256
+#pragma pack(1)
+struct ata_erase_count
+{
+  int erase_count[SUPER_BLOCK_COUNT];
+} ATTR_PACKED;
+#pragma pack()
+ASSERT_SIZEOF_STRUCT(ata_erase_count, SUPER_BLOCK_COUNT * sizeof(int));
+
+// Shannon System: shannon system command
+#pragma pack(1)
+struct ata_shannon_command
+{
+  unsigned short ss_command;        // the command for shannon system
+  unsigned short words001_255[255]; // reserved
+} ATTR_PACKED;
+#pragma pack()
+ASSERT_SIZEOF_STRUCT(ata_shannon_command, 512);
+
 // Possible values for span_args.mode
 enum {
   SEL_RANGE, // MIN-MAX
@@ -808,6 +834,9 @@ int ataEnableSmart (ata_device * device);
 int ataDisableSmart (ata_device * device);
 int ataEnableAutoSave(ata_device * device);
 int ataDisableAutoSave(ata_device * device);
+
+/* Shannon System commands*/
+int ataGetEraseCount (ata_device * device,  ata_erase_count * erase_count);
 
 /* Automatic Offline Testing */
 int ataEnableAutoOffline (ata_device * device);

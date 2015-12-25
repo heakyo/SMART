@@ -553,6 +553,7 @@ int smartcommandhandler(ata_device * device, smart_command_set command, int sele
       start_usec = smi()->get_timer_usec();
 
     bool ok = device->ata_pass_through(in, out);
+	pout("ok:%d\n",ok);
 
     if (start_usec >= 0) {
       int64_t duration_usec = smi()->get_timer_usec() - start_usec;
@@ -2881,6 +2882,44 @@ int ataPrintSmartSelfTestlog(const ata_smart_selftestlog * data, bool allentries
   return ((hours << 8) | errcnt);
 }
 
+int ataGetEraseCount (ata_device * device,  ata_erase_count * perase_count){
+
+#if 0
+  ata_shannon_command cmd;
+
+  if (NULL == perase_count) {
+  	pout("perase_count is NULL!!");
+	return -1;
+  }
+
+  memset(&cmd, 0x0, sizeof(cmd));
+
+  cmd.ss_command = ERASE_COUNT;
+
+  // write command via Host Vendor Specific log
+  if (smartcommandhandler(device, WRITE_LOG, 0x80, (char *)&cmd)){
+    pout("Write Host Vendor Specific log 0x80 failed: %s\n", device->get_errmsg());
+    return -1;
+  }
+
+  // read erase count data via Host Vendor Specific log
+  memset(perase_count, 0x0, sizeof(*perase_count));
+  if (smartcommandhandler(device, READ_LOG, 0x80, (char *)perase_count)){
+    pout("Read Host Vendor Specific log 0x85 failed: %s\n", device->get_errmsg());
+    return -1;
+  }
+  
+#else
+
+  int i = 0;
+
+  for (i = 0; i < SUPER_BLOCK_COUNT; i++) {
+	perase_count->erase_count[i] = i;
+  }
+
+#endif  
+  return 0;
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // Pseudo-device to parse "smartctl -r ataioctl,2 ..." output and simulate

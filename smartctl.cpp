@@ -486,8 +486,9 @@ static const char * parse_options(int argc, char** argv,
         ataopts.sct_temp_sts = true;
       } else if (!strcmp(optarg,"scttemphist")) {
         ataopts.sct_temp_hist = true;
-
-      } else if (!strncmp(optarg, "scttempint,", sizeof("scstempint,")-1)) {
+      } else if (!strcmp(optarg,"sserasecnt")) {
+		ataopts.ss_erase_count = true;
+	  } else if (!strncmp(optarg, "scttempint,", sizeof("scstempint,")-1)) {
         unsigned interval = 0; int n1 = -1, n2 = -1, len = strlen(optarg);
         if (!(   sscanf(optarg,"scttempint,%u%n,p%n", &interval, &n1, &n2) == 1
               && 0 < interval && interval <= 0xffff && (n1 == len || n2 == len))) {
